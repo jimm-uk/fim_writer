@@ -1,0 +1,1509 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>FIM Writer</title>
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            :root {
+                --bg: #fafafa;
+                --bg2: #fff;
+                --bg3: #f0f0f0;
+                --bg-hint: #eef2ff;
+                --tx: #1a1a1a;
+                --tx2: #555;
+                --tx3: #999;
+                --bd: #e0e0e0;
+                --bd2: #c8c8c8;
+                --ac: #3a5cd8;
+                --ac-bg: #eef2ff;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #1c1c1c;
+                    --bg2: #242424;
+                    --bg3: #2e2e2e;
+                    --bg-hint: #1a1f3a;
+                    --tx: #e4e4e4;
+                    --tx2: #888;
+                    --tx3: #555;
+                    --bd: #333;
+                    --bd2: #444;
+                    --ac: #7d9eff;
+                    --ac-bg: #1a1f3a;
+                }
+            }
+            body {
+                font-family: system-ui, sans-serif;
+                background: var(--bg);
+                color: var(--tx);
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                font-size: 13px;
+            }
+
+            /* ── Toolbar ── */
+            #tb {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                padding: 6px 10px;
+                background: var(--bg2);
+                border-bottom: 1px solid var(--bd);
+                flex-shrink: 0;
+                flex-wrap: wrap;
+            }
+            .ti {
+                font-size: 12px;
+                padding: 4px 7px;
+                border: 1px solid var(--bd);
+                border-radius: 5px;
+                background: var(--bg);
+                color: var(--tx);
+                font-family: inherit;
+            }
+            .ti:focus {
+                outline: none;
+                border-color: var(--ac);
+            }
+            #t-url {
+                width: 160px;
+            }
+            #t-key {
+                width: 130px;
+                font-family: monospace;
+            }
+            #t-model {
+                width: 130px;
+            }
+            .tbn {
+                font-size: 11px;
+                padding: 4px 8px;
+                border: 1px solid var(--bd);
+                border-radius: 5px;
+                background: var(--bg);
+                color: var(--tx2);
+                cursor: pointer;
+            }
+            .tbn:hover {
+                background: var(--bg3);
+            }
+            #status {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 11px;
+                color: var(--tx3);
+                flex-shrink: 0;
+            }
+            #dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--tx3);
+                transition: background 0.3s;
+                flex-shrink: 0;
+            }
+            #dot.loading {
+                background: #f59e0b;
+            }
+            #dot.ready {
+                background: #22c55e;
+            }
+            #dot.error {
+                background: #ef4444;
+            }
+
+            /* ── Main ── */
+            #main {
+                display: flex;
+                flex: 1;
+                overflow: hidden;
+            }
+
+            /* ── Format bar ── */
+            #fb {
+                width: 40px;
+                background: var(--bg2);
+                border-right: 1px solid var(--bd);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 5px 0;
+                gap: 1px;
+                flex-shrink: 0;
+                overflow-y: auto;
+            }
+            .f {
+                width: 30px;
+                height: 26px;
+                border: none;
+                background: transparent;
+                cursor: pointer;
+                border-radius: 4px;
+                color: var(--tx);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                font-size: 12px;
+                line-height: 1;
+            }
+            .f:hover {
+                background: var(--bg3);
+            }
+            .f[title]:hover::after {
+                content: attr(title);
+                position: fixed;
+                left: 46px;
+                background: var(--bg2);
+                border: 1px solid var(--bd);
+                padding: 3px 7px;
+                border-radius: 4px;
+                font-size: 11px;
+                color: var(--tx2);
+                white-space: nowrap;
+                pointer-events: none;
+                z-index: 100;
+            }
+            .fb {
+                font-weight: 700;
+                font-size: 14px;
+            }
+            .fi {
+                font-style: italic;
+                font-size: 14px;
+            }
+            .fs {
+                text-decoration: line-through;
+            }
+            .fm {
+                font-family: monospace;
+                font-size: 11px;
+            }
+            .fsep {
+                width: 24px;
+                height: 1px;
+                background: var(--bd);
+                margin: 3px 0;
+                flex-shrink: 0;
+            }
+
+            /* ── Editor area ── */
+            #ea {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                overflow: hidden;
+            }
+            #ed {
+                flex: 1;
+                padding: 28px 44px;
+                font-family: Georgia, "Times New Roman", serif;
+                font-size: 16px;
+                line-height: 1.9;
+                border: none;
+                outline: none;
+                resize: none;
+                background: var(--bg2);
+                color: var(--tx);
+                overflow-y: auto;
+                tab-size: 4;
+            }
+
+            /* ── Suggestion ── */
+            #sp {
+                display: none;
+                background: var(--ac-bg);
+                border-top: 1px solid var(--bd);
+                padding: 10px 44px 12px;
+                flex-shrink: 0;
+                max-height: 160px;
+                overflow-y: auto;
+            }
+            #sp.on {
+                display: block;
+            }
+            #st {
+                font-family: Georgia, "Times New Roman", serif;
+                font-size: 15px;
+                line-height: 1.8;
+                color: var(--ac);
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+            #sh {
+                margin-top: 6px;
+                font-size: 11px;
+                color: var(--tx3);
+                display: flex;
+                gap: 12px;
+            }
+            kbd {
+                font-family: monospace;
+                background: var(--bg3);
+                padding: 1px 5px;
+                border-radius: 3px;
+                font-size: 10px;
+                color: var(--tx2);
+            }
+
+            /* ── Context bar ── */
+            #cb {
+                background: var(--bg);
+                border-top: 1px solid var(--bd);
+                padding: 3px 44px;
+                font-size: 11px;
+                color: var(--tx3);
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                overflow: hidden;
+                min-height: 22px;
+            }
+            #cl {
+                flex-shrink: 0;
+                font-weight: 600;
+                color: var(--tx2);
+            }
+            #cx {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-style: italic;
+            }
+
+            /* ── Preview ── */
+            #pv{display:none;flex:1;padding:28px 44px;overflow-y:auto;background:var(--bg2);color:var(--tx);font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.9}
+            #pv.on{display:block}
+            #pv h1,#pv h2,#pv h3,#pv h4{font-family:system-ui,sans-serif;line-height:1.3;margin:1.4em 0 .4em}
+            #pv h1{font-size:2em}#pv h2{font-size:1.5em}#pv h3{font-size:1.2em}#pv h4{font-size:1em}
+            #pv p{margin:.7em 0}
+            #pv ul,#pv ol{margin:.7em 0;padding-left:1.8em}
+            #pv li{margin:.2em 0}
+            #pv blockquote{border-left:3px solid var(--bd2);margin:.8em 0;padding:.2em 1em;color:var(--tx2);font-style:italic}
+            #pv pre{background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:12px 16px;overflow-x:auto;margin:.8em 0}
+            #pv code{font-family:monospace;font-size:.88em;background:var(--bg3);padding:1px 4px;border-radius:3px}
+            #pv pre code{background:none;padding:0}
+            #pv table{border-collapse:collapse;margin:.8em 0;width:100%}
+            #pv th,#pv td{border:1px solid var(--bd);padding:6px 12px}
+            #pv th{background:var(--bg3);font-weight:600}
+            #pv img{max-width:100%;height:auto;margin:.4em 0}
+            #pv mark{background:rgba(250,204,21,.35);border-radius:2px;padding:0 2px}
+            #pv hr{border:none;border-top:1px solid var(--bd);margin:1.5em 0}
+            #pv a{color:var(--ac)}
+            #pv del{color:var(--tx3)}
+            #ed.pv-on{display:none}
+
+            /* ── Print / Export ── */
+            @media print {
+                #tb,
+                #fb,
+                #sp,
+                #cb {
+                    display: none !important;
+                }
+                #main {
+                    display: block;
+                }
+                #ea {
+                    display: block;
+                }
+                #ed {
+                    border: none;
+                    padding: 0;
+                    font-size: 12pt;
+                    line-height: 1.8;
+                    overflow: visible;
+                    height: auto;
+                    background: #fff;
+                    color: #000;
+                    white-space: pre-wrap;
+                }
+                body {
+                    height: auto;
+                    overflow: visible;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="tb">
+            <input
+                class="ti"
+                id="t-url"
+                type="text"
+                placeholder="Base URL"
+                title="e.g. https://api.openai.com/v1 or http://localhost:1234/v1"
+                spellcheck="false"
+                autocomplete="off"
+            />
+            <input
+                class="ti"
+                id="t-key"
+                type="password"
+                placeholder="API key"
+                title="Leave blank for unauthenticated local servers"
+                autocomplete="off"
+            />
+            <input
+                class="ti"
+                id="t-model"
+                type="text"
+                placeholder="Model name"
+                list="saved-models"
+                spellcheck="false"
+                autocomplete="off"
+            />
+            <datalist id="saved-models"></datalist>
+            <button class="tbn" id="btn-save" title="Save URL,Key,Model to CSV file">Save to CSV</button>
+            <button class="tbn" id="btn-load-cfg" title="Load URL,Key,Model from CSV file">Load Config</button>
+            <label
+                class="tbn"
+                style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 3px;
+                    cursor: pointer;
+                "
+                title="Stream completions token-by-token"
+                ><input
+                    type="checkbox"
+                    id="t-stream"
+                    style="margin: 0"
+                />Stream</label
+            >
+            <span style="color: var(--bd2); margin: 0 2px">|</span>
+            <button class="tbn" id="btn-open" title="Open .md file (Ctrl+O)">Open</button>
+            <button class="tbn" id="btn-savef" title="Save file (Ctrl+S)">Save</button>
+            <button class="tbn" id="btn-export" title="Export / Print (Ctrl+P)">Export</button>
+            <button class="tbn" id="btn-reset" title="New document — clears the editor">Reset</button>
+            <button class="tbn" id="btn-preview" title="Toggle markdown preview">Preview</button>
+            <span style="color: var(--bd2); margin: 0 2px">|</span>
+            <button class="tbn" id="btn-copy-md" title="Copy document as Markdown">Copy MD</button>
+            <button class="tbn" id="btn-copy-html" title="Copy document as HTML">Copy HTML</button>
+            <div id="status">
+                <div id="dot"></div>
+                <span id="stxt">idle</span>
+                <button class="tbn" id="btn-test" title="Send a test request to verify the connection" style="margin-left:4px">Test</button>
+            </div>
+        </div>
+
+        <div id="main">
+            <div id="fb">
+                <button class="f fb" data-f="bold" title="Bold">B</button>
+                <button class="f fi" data-f="italic" title="Italic">I</button>
+                <button class="f fs" data-f="strike" title="Strikethrough">
+                    S
+                </button>
+                <button
+                    class="f"
+                    data-f="highlight"
+                    title="Highlight"
+                    style="
+                        font-size: 11px;
+                        background: rgba(250, 204, 21, 0.25);
+                    "
+                >
+                    H
+                </button>
+                <button class="f fm" data-f="code" title="Inline code">
+                    &lt;&gt;
+                </button>
+                <button
+                    class="f fm"
+                    data-f="codeblock"
+                    title="Code block"
+                    style="font-size: 9px"
+                >
+                    ```
+                </button>
+                <button
+                    class="f fm"
+                    data-f="comment"
+                    title="Comment"
+                    style="font-size: 10px"
+                >
+                    &lt;!--
+                </button>
+                <button
+                    class="f"
+                    data-f="clear"
+                    title="Clear inline formatting"
+                    style="font-size: 13px"
+                >
+                    ✕
+                </button>
+                <div class="fsep"></div>
+                <button
+                    class="f"
+                    data-f="ul"
+                    title="Bullet list"
+                    style="font-size: 16px; line-height: 1"
+                >
+                    •
+                </button>
+                <button
+                    class="f"
+                    data-f="ol"
+                    title="Numbered list"
+                    style="font-size: 11px; font-weight: 600"
+                >
+                    1.
+                </button>
+                <button
+                    class="f"
+                    data-f="body"
+                    title="Body / remove prefix"
+                    style="font-size: 14px"
+                >
+                    ¶
+                </button>
+                <button
+                    class="f"
+                    data-f="h1"
+                    title="Heading 1"
+                    style="font-size: 12px; font-weight: 700"
+                >
+                    H1
+                </button>
+                <button
+                    class="f"
+                    data-f="h2"
+                    title="Heading 2"
+                    style="font-size: 11px; font-weight: 700"
+                >
+                    H2
+                </button>
+                <button
+                    class="f"
+                    data-f="h3"
+                    title="Heading 3"
+                    style="font-size: 11px; font-weight: 600"
+                >
+                    H3
+                </button>
+                <button
+                    class="f"
+                    data-f="h4"
+                    title="Heading 4"
+                    style="font-size: 10px; font-weight: 600"
+                >
+                    H4
+                </button>
+                <button
+                    class="f"
+                    data-f="quote"
+                    title="Blockquote"
+                    style="font-size: 18px; line-height: 1; padding-bottom: 2px"
+                >
+                    "
+                </button>
+                <div class="fsep"></div>
+                <button
+                    class="f"
+                    data-f="link"
+                    title="Link"
+                    style="font-size: 11px"
+                >
+                    🔗
+                </button>
+                <button
+                    class="f"
+                    data-f="image"
+                    title="Image"
+                    style="font-size: 11px"
+                >
+                    🖼
+                </button>
+                <button
+                    class="f"
+                    data-f="table"
+                    title="Table"
+                    style="font-size: 10px; font-weight: 600"
+                >
+                    ⊞
+                </button>
+            </div>
+
+            <div id="ea">
+                <textarea
+                    id="ed"
+                    placeholder="Start writing…&#10;&#10;  Tab          → request completion&#10;  Tab          → accept suggestion&#10;  Esc          → dismiss&#10;  Shift+Tab    → literal tab"
+                ></textarea>
+                <div id="sp">
+                    <div id="st"></div>
+                    <div id="sh">
+                        <span><kbd>Tab</kbd> accept</span>
+                        <span><kbd>Esc</kbd> dismiss</span>
+                        <span>any other key dismisses</span>
+                    </div>
+                </div>
+                <div id="pv"></div>
+                <div id="cb"><span id="cl"></span><span id="cx"></span></div>
+            </div>
+        </div>
+
+        <script>
+            const $ = (id) => document.getElementById(id);
+
+            // ── Config ───────────────────────────────────────────────────
+            const PREFIX_CH = 900,
+                SUFFIX_CH = 400;
+            const SUM_MIN_WC = 60,
+                SUM_DIRTY = 80,
+                SUM_IDLE = 3000;
+
+            // ── State ────────────────────────────────────────────────────
+            const S = {
+                suggestion: null,
+                summary: null,
+                sumWC: 0,
+                sumTimer: null,
+                completing: false,
+                summarising: false,
+            };
+
+            // ── Undo / Redo ──────────────────────────────────────────────
+            const H = {
+                stack: [],
+                idx: -1,
+                max: 200,
+                restoring: false,
+                timer: null,
+            };
+
+            function snap() {
+                const ta = $("ed");
+                return {
+                    v: ta.value,
+                    s: ta.selectionStart,
+                    e: ta.selectionEnd,
+                };
+            }
+
+            function pushUndo() {
+                if (H.restoring) return;
+                const s = snap();
+                if (H.idx >= 0 && H.stack[H.idx].v === s.v) return;
+                H.stack.length = H.idx + 1;
+                H.stack.push(s);
+                if (H.stack.length > H.max) H.stack.shift();
+                H.idx = H.stack.length - 1;
+            }
+
+            function undo() {
+                const cur = snap();
+                if (H.idx >= 0 && H.stack[H.idx].v !== cur.v) {
+                    H.stack.length = H.idx + 1;
+                    H.stack.push(cur);
+                    H.idx = H.stack.length - 1;
+                }
+                if (H.idx <= 0) return;
+                H.idx--;
+                H.restoring = true;
+                const ta = $("ed"),
+                    st = H.stack[H.idx];
+                ta.value = st.v;
+                ta.selectionStart = st.s;
+                ta.selectionEnd = st.e;
+                H.restoring = false;
+                updateCtx();
+            }
+
+            function redo() {
+                if (H.idx >= H.stack.length - 1) return;
+                H.idx++;
+                H.restoring = true;
+                const ta = $("ed"),
+                    st = H.stack[H.idx];
+                ta.value = st.v;
+                ta.selectionStart = st.s;
+                ta.selectionEnd = st.e;
+                H.restoring = false;
+                updateCtx();
+            }
+
+            function schedUndo() {
+                if (H.restoring) return;
+                clearTimeout(H.timer);
+                H.timer = setTimeout(pushUndo, 400);
+            }
+
+            // ── Persist settings ─────────────────────────────────────────
+            const urlEl = $("t-url"),
+                keyEl = $("t-key"),
+                modEl = $("t-model");
+            urlEl.value =
+                localStorage.getItem("fw_url") || "https://api.openai.com/v1";
+            keyEl.value = sessionStorage.getItem("fw_key") || "";
+            modEl.value = localStorage.getItem("fw_model") || "";
+            urlEl.addEventListener("input", () =>
+                localStorage.setItem("fw_url", urlEl.value.trim()),
+            );
+            keyEl.addEventListener("input", () =>
+                sessionStorage.setItem("fw_key", keyEl.value.trim()),
+            );
+            modEl.addEventListener("input", () =>
+                localStorage.setItem("fw_model", modEl.value.trim()),
+            );
+
+            // ── Saved models ─────────────────────────────────────────────
+            const getModels = () =>
+                JSON.parse(localStorage.getItem("fw_models") || "[]");
+            const putModels = (arr) =>
+                localStorage.setItem("fw_models", JSON.stringify(arr));
+
+            function refreshDL() {
+                const dl = $("saved-models");
+                dl.innerHTML = "";
+                getModels().forEach((m) => {
+                    const o = document.createElement("option");
+                    o.value = m;
+                    dl.appendChild(o);
+                });
+            }
+            refreshDL();
+
+            $("btn-save").addEventListener("click", () => {
+                const csv = [urlEl.value.trim(), keyEl.value.trim(), modEl.value.trim()].join(",");
+                const blob = new Blob([csv], { type: "text/csv" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = "fim_config.csv";
+                a.click();
+                URL.revokeObjectURL(a.href);
+                setStatus("ready", "config saved");
+            });
+
+            // ── Status helpers ───────────────────────────────────────────
+            const setStatus = (cls, msg) => {
+                $("dot").className = cls;
+                $("stxt").textContent = msg;
+            };
+            const words = (t) => (t.trim() ? t.trim().split(/\s+/).length : 0);
+
+            // ── Suggestion ───────────────────────────────────────────────
+            function showSuggestion(text) {
+                S.suggestion = text;
+                $("st").textContent = text;
+                $("sp").classList.add("on");
+            }
+            function dismiss() {
+                S.suggestion = null;
+                $("sp").classList.remove("on");
+                $("st").textContent = "";
+            }
+            function accept() {
+                if (!S.suggestion) return;
+                pushUndo();
+                const ta = $("ed"),
+                    p = ta.selectionStart;
+                ta.value =
+                    ta.value.slice(0, p) + S.suggestion + ta.value.slice(p);
+                ta.selectionStart = ta.selectionEnd = p + S.suggestion.length;
+                dismiss();
+                schedSummary();
+            }
+
+            // ── Context bar ──────────────────────────────────────────────
+            function updateCtx() {
+                const wc = words($("ed").value);
+                if (S.summary) {
+                    $("cl").textContent = "Context:";
+                    $("cx").textContent = S.summary;
+                } else if (wc > 0) {
+                    $("cl").textContent = "";
+                    $("cx").textContent =
+                        wc < SUM_MIN_WC
+                            ? `${wc} words — summary after ${SUM_MIN_WC}`
+                            : `${wc} words — summarising…`;
+                } else {
+                    $("cl").textContent = "";
+                    $("cx").textContent = "";
+                }
+            }
+
+            // ── API fetch helper ─────────────────────────────────────────
+            // Unauthenticated (local) servers: use text/plain to avoid the CORS
+            // preflight OPTIONS request. Most OpenAI-compatible servers parse the
+            // JSON body regardless of Content-Type. If the server strictly requires
+            // application/json it must also handle OPTIONS with CORS headers.
+            // Authenticated (remote) servers: use application/json; remote
+            // providers handle CORS properly.
+            async function apiFetch(url, body) {
+                const key = keyEl.value.trim();
+                const headers = key
+                    ? { "Content-Type": "application/json", Authorization: `Bearer ${key}` }
+                    : { "Content-Type": "text/plain" };
+                console.debug('[FIM] apiFetch', url, 'Content-Type:', headers['Content-Type'], 'auth:', !!key);
+                let r;
+                try {
+                    r = await fetch(url, { method: "POST", headers, body });
+                } catch (err) {
+                    console.error('[FIM] fetch threw (network/CORS?):', err);
+                    throw err;
+                }
+                console.debug('[FIM] response', r.status, r.statusText, 'CORS origin header:', r.headers.get('access-control-allow-origin'));
+                if (r.status === 415) {
+                    console.error(
+                        '[FIM] 415 Unsupported Media Type — the server requires Content-Type: application/json, ' +
+                        'but that triggers a CORS preflight OPTIONS request which this server does not handle correctly. ' +
+                        'Fix: make the server return HTTP 200 for OPTIONS /v1/chat/completions with headers:\n' +
+                        '  Access-Control-Allow-Origin: *\n' +
+                        '  Access-Control-Allow-Methods: POST\n' +
+                        '  Access-Control-Allow-Headers: Content-Type'
+                    );
+                    throw new Error('Server requires application/json but rejects CORS preflight — see console for fix');
+                }
+                return r;
+            }
+
+            // ── API call ─────────────────────────────────────────────────
+            async function callAPI(messages, maxTok = 300, temp = 0.72) {
+                const base = (
+                    urlEl.value.trim() || "https://api.openai.com/v1"
+                ).replace(/\/$/, "");
+                const model = modEl.value.trim();
+                if (!model) throw new Error("No model specified");
+                const bodyObj = { model, messages, max_tokens: maxTok, max_completion_tokens: maxTok, temperature: temp };
+                console.debug('[FIM] callAPI body:', JSON.stringify(bodyObj).slice(0, 300));
+                const r = await apiFetch(`${base}/chat/completions`, JSON.stringify(bodyObj));
+                if (!r.ok) {
+                    const e = await r.json().catch(() => ({}));
+                    console.error('[FIM] callAPI error response:', e);
+                    throw new Error(e?.error?.message || e?.message || `HTTP ${r.status}`);
+                }
+                const d = await r.json();
+                console.debug('[FIM] callAPI success, content length:', d.choices?.[0]?.message?.content?.length);
+                return d.choices?.[0]?.message?.content?.trim() || "";
+            }
+
+            // ── Streaming API call ───────────────────────────────────────
+            async function streamAPI(messages, maxTok = 300, temp = 0.72) {
+                const base = (
+                    urlEl.value.trim() || "https://api.openai.com/v1"
+                ).replace(/\/$/, "");
+                const model = modEl.value.trim();
+                if (!model) throw new Error("No model specified");
+                const r = await apiFetch(
+                    `${base}/chat/completions`,
+                    JSON.stringify({
+                        model,
+                        messages,
+                        max_tokens: maxTok,
+                        max_completion_tokens: maxTok,
+                        temperature: temp,
+                        stream: true,
+                    }),
+                );
+                if (!r.ok) {
+                    const e = await r.json().catch(() => ({}));
+                    console.error('[FIM] streamAPI error response:', e);
+                    throw new Error(e?.error?.message || e?.message || `HTTP ${r.status}`);
+                }
+                console.debug('[FIM] streamAPI stream open');
+                const reader = r.body.getReader(),
+                    dec = new TextDecoder();
+                let text = "",
+                    buf = "";
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += dec.decode(value, { stream: true });
+                    const lines = buf.split("\n");
+                    buf = lines.pop();
+                    for (const ln of lines) {
+                        if (!ln.startsWith("data: ")) continue;
+                        const data = ln.slice(6).trim();
+                        if (data === "[DONE]") {
+                            reader.cancel();
+                            break;
+                        }
+                        try {
+                            const delta =
+                                JSON.parse(data).choices?.[0]?.delta?.content;
+                            if (delta) {
+                                text += delta;
+                                showSuggestion(text);
+                            }
+                        } catch {}
+                    }
+                }
+                return text.trim();
+            }
+
+            // ── Summarise ────────────────────────────────────────────────
+            async function runSummary() {
+                if (S.summarising) return;
+                const text = $("ed").value.trim(),
+                    wc = words(text);
+                if (wc < SUM_MIN_WC) return;
+                S.summarising = true;
+                try {
+                    S.summary = await callAPI(
+                        [
+                            {
+                                role: "system",
+                                content:
+                                    "Summarise the document in 1–2 sentences: main topic, tone, and likely intended reader. Output only the summary, no preamble.",
+                            },
+                            { role: "user", content: text },
+                        ],
+                        100,
+                        0.4,
+                    );
+                    S.sumWC = wc;
+                    updateCtx();
+                } catch (e) {
+                    console.warn("Summary:", e.message);
+                } finally {
+                    S.summarising = false;
+                }
+            }
+
+            function schedSummary() {
+                clearTimeout(S.sumTimer);
+                S.sumTimer = setTimeout(() => {
+                    const wc = words($("ed").value),
+                        delta = wc - S.sumWC;
+                    if (!S.summary && wc >= SUM_MIN_WC) runSummary();
+                    else if (delta >= SUM_DIRTY) runSummary();
+                    updateCtx();
+                }, SUM_IDLE);
+                updateCtx();
+            }
+
+            // ── FIM completion ───────────────────────────────────────────
+            async function requestCompletion() {
+                if (S.completing) return;
+                if (!modEl.value.trim()) {
+                    setStatus("error", "no model");
+                    return;
+                }
+                const ta = $("ed"),
+                    cur = ta.selectionStart,
+                    full = ta.value;
+                const prefix = full.slice(0, cur).slice(-PREFIX_CH);
+                const suffix = full.slice(cur).slice(0, SUFFIX_CH);
+                if (!prefix.trim()) {
+                    setStatus("", "nothing before cursor");
+                    return;
+                }
+                dismiss();
+                S.completing = true;
+                setStatus("loading", "thinking…");
+                const ctx = S.summary
+                    ? `Document context: ${S.summary}\n\n`
+                    : "";
+                const sys = `You are a writing assistant performing fill-in-the-middle (FIM) completion for prose and markdown documents. Produce only the text that belongs between the given prefix and suffix.
+
+Rules:
+- Output ONLY the completion text. No explanation, no preamble, no quotation marks.
+- Match the author's voice, tone, and register exactly.
+- Do not repeat text already in the prefix or suffix.
+- The completion must flow grammatically into both ends.
+- Aim for 1–3 sentences unless the gap clearly requires more or less.
+- If the prefix ends mid-sentence, complete that sentence first.
+- If there is no suffix, write a natural continuation.`;
+                const usr = `${ctx}Text before cursor:\n${prefix}\n\nText after cursor:\n${suffix || "(end of document)"}\n\nWrite only the completion text:`;
+                const messages = [
+                    { role: "system", content: sys },
+                    { role: "user", content: usr },
+                ];
+                console.debug('[FIM] requestCompletion stream:', $("t-stream").checked, 'url:', urlEl.value.trim(), 'model:', modEl.value.trim(), 'key:', !!keyEl.value.trim());
+                try {
+                    if ($("t-stream").checked) {
+                        const c = await streamAPI(messages, 320);
+                        if (c) setStatus("ready", "suggestion ready");
+                        else {
+                            dismiss();
+                            setStatus("", "no suggestion returned");
+                        }
+                    } else {
+                        const c = await callAPI(messages, 320);
+                        if (c) {
+                            showSuggestion(c);
+                            setStatus("ready", "suggestion ready");
+                        } else setStatus("", "no suggestion returned");
+                    }
+                } catch (e) {
+                    console.error('[FIM] requestCompletion caught:', e);
+                    dismiss();
+                    setStatus("error", e.message.slice(0, 50));
+                } finally {
+                    S.completing = false;
+                }
+            }
+
+            // ── Formatting helpers ───────────────────────────────────────
+            function ins(ta, s, e, text) {
+                ta.value = ta.value.slice(0, s) + text + ta.value.slice(e);
+            }
+
+            function applyInline(open, close) {
+                close = close || open;
+                pushUndo();
+                const ta = $("ed"),
+                    s = ta.selectionStart,
+                    e = ta.selectionEnd,
+                    sel = ta.value.slice(s, e);
+                if (sel) {
+                    ins(ta, s, e, open + sel + close);
+                    ta.selectionStart = s + open.length;
+                    ta.selectionEnd = s + open.length + sel.length;
+                } else {
+                    ins(ta, s, e, open + close);
+                    ta.selectionStart = ta.selectionEnd = s + open.length;
+                }
+                ta.focus();
+            }
+
+            function applyBlock(prefix) {
+                pushUndo();
+                const ta = $("ed"),
+                    s = ta.selectionStart,
+                    e = ta.selectionEnd,
+                    val = ta.value;
+                const ls = val.lastIndexOf("\n", s - 1) + 1;
+                let le = val.indexOf("\n", e - 1);
+                if (le < e || le === -1) le = val.indexOf("\n", e);
+                if (le === -1) le = val.length;
+                const lines = val.slice(ls, le).split("\n");
+                const clean = lines.map((l) =>
+                    l.replace(/^(#{1,4} |> |- |\d+\. )/, ""),
+                );
+                const newText = (
+                    prefix
+                        ? clean.map(
+                              (l, i) =>
+                                  (typeof prefix === "function"
+                                      ? prefix(i)
+                                      : prefix) + l,
+                          )
+                        : clean
+                ).join("\n");
+                ta.value = val.slice(0, ls) + newText + val.slice(le);
+                ta.selectionStart = ta.selectionEnd = ls + newText.length;
+                ta.focus();
+                schedSummary();
+            }
+
+            function clearInline() {
+                pushUndo();
+                const ta = $("ed"),
+                    s = ta.selectionStart,
+                    e = ta.selectionEnd;
+                if (s === e) return;
+                let sel = ta.value.slice(s, e);
+                sel = sel
+                    .replace(/\*\*(.+?)\*\*/gs, "$1")
+                    .replace(/\*(.+?)\*/gs, "$1")
+                    .replace(/~~(.+?)~~/gs, "$1")
+                    .replace(/==(.+?)==/gs, "$1")
+                    .replace(/`(.+?)`/gs, "$1")
+                    .replace(/<!--([\s\S]+?)-->/gs, "$1");
+                ins(ta, s, e, sel);
+                ta.selectionStart = s;
+                ta.selectionEnd = s + sel.length;
+                ta.focus();
+            }
+
+            // ── Format bar dispatch ──────────────────────────────────────
+            document.querySelectorAll(".f[data-f]").forEach((btn) => {
+                btn.addEventListener("mousedown", (e) => {
+                    e.preventDefault(); // preserve textarea selection
+                    switch (btn.dataset.f) {
+                        case "bold":
+                            applyInline("**");
+                            break;
+                        case "italic":
+                            applyInline("*");
+                            break;
+                        case "strike":
+                            applyInline("~~");
+                            break;
+                        case "highlight":
+                            applyInline("==");
+                            break;
+                        case "code":
+                            applyInline("`");
+                            break;
+                        case "codeblock": {
+                            pushUndo();
+                            const ta = $("ed"), s = ta.selectionStart, e = ta.selectionEnd;
+                            const sel = ta.value.slice(s, e);
+                            const pre = s > 0 && ta.value[s - 1] !== '\n' ? '\n' : '';
+                            const post = e < ta.value.length && ta.value[e] !== '\n' ? '\n' : '';
+                            const block = pre + '```\n' + sel + '\n```' + post;
+                            ins(ta, s, e, block);
+                            ta.selectionStart = s + pre.length + 4;
+                            ta.selectionEnd = s + pre.length + 4 + sel.length;
+                            ta.focus();
+                            break;
+                        }
+                        case "comment":
+                            applyInline("<!-- ", " -->");
+                            break;
+                        case "clear":
+                            clearInline();
+                            break;
+                        case "ul":
+                            applyBlock("- ");
+                            break;
+                        case "ol":
+                            applyBlock((i) => `${i + 1}. `);
+                            break;
+                        case "body":
+                            applyBlock("");
+                            break;
+                        case "h1":
+                            applyBlock("# ");
+                            break;
+                        case "h2":
+                            applyBlock("## ");
+                            break;
+                        case "h3":
+                            applyBlock("### ");
+                            break;
+                        case "h4":
+                            applyBlock("#### ");
+                            break;
+                        case "quote":
+                            applyBlock("> ");
+                            break;
+                        case "link": {
+                            pushUndo();
+                            const ta = $("ed"), s = ta.selectionStart, e = ta.selectionEnd;
+                            const sel = ta.value.slice(s, e);
+                            if (sel) {
+                                ins(ta, s, e, `[${sel}](url)`);
+                                ta.selectionStart = s + sel.length + 3;
+                                ta.selectionEnd = s + sel.length + 6;
+                            } else {
+                                ins(ta, s, e, "[text](url)");
+                                ta.selectionStart = s + 1;
+                                ta.selectionEnd = s + 5;
+                            }
+                            ta.focus();
+                            break;
+                        }
+                        case "image": {
+                            pushUndo();
+                            const ta = $("ed"), s = ta.selectionStart, e = ta.selectionEnd;
+                            const sel = ta.value.slice(s, e);
+                            if (sel) {
+                                ins(ta, s, e, `![${sel}](url)`);
+                                ta.selectionStart = s + sel.length + 4;
+                                ta.selectionEnd = s + sel.length + 7;
+                            } else {
+                                ins(ta, s, e, "![alt](url)");
+                                ta.selectionStart = s + 2;
+                                ta.selectionEnd = s + 5;
+                            }
+                            ta.focus();
+                            break;
+                        }
+                        case "table": {
+                            pushUndo();
+                            const ta = $("ed"), s = ta.selectionStart;
+                            const tpl = "| Header | Header |\n| --- | --- |\n| Cell | Cell |\n";
+                            const pre = s > 0 && ta.value[s - 1] !== '\n' ? '\n' : '';
+                            ins(ta, s, s, pre + tpl);
+                            ta.selectionStart = ta.selectionEnd = s + pre.length + tpl.length;
+                            ta.focus();
+                            break;
+                        }
+                    }
+                });
+            });
+
+            // ── Editor keyboard ──────────────────────────────────────────
+            $("ed").addEventListener("keydown", (e) => {
+                if (S.suggestion) {
+                    if (e.key === "Tab") {
+                        e.preventDefault();
+                        accept();
+                        return;
+                    }
+                    if (e.key === "Escape") {
+                        e.preventDefault();
+                        dismiss();
+                        setStatus("", "dismissed");
+                        return;
+                    }
+                    if (!e.metaKey && !e.ctrlKey) dismiss();
+                    return;
+                }
+                if (
+                    (e.key === "z" || e.key === "Z") &&
+                    (e.metaKey || e.ctrlKey) &&
+                    !e.altKey
+                ) {
+                    e.preventDefault();
+                    if (e.shiftKey) redo();
+                    else undo();
+                    return;
+                }
+                if (e.key === "y" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    redo();
+                    return;
+                }
+                if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+                    const ta = $("ed"), pos = ta.selectionStart, val = ta.value;
+                    const ls = val.lastIndexOf("\n", pos - 1) + 1;
+                    const line = val.slice(ls, pos);
+                    const ulM = line.match(/^(\s*- )/);
+                    const olM = line.match(/^(\s*)(\d+)\. /);
+                    if (ulM || olM) {
+                        const prefixLen = (ulM || olM)[0].length;
+                        if (line.slice(prefixLen).trim() === "") {
+                            // empty item — exit list
+                            e.preventDefault();
+                            pushUndo();
+                            ta.value = val.slice(0, ls) + "\n" + val.slice(pos);
+                            ta.selectionStart = ta.selectionEnd = ls + 1;
+                        } else {
+                            e.preventDefault();
+                            pushUndo();
+                            const next = ulM ? ulM[1] : olM[1] + (parseInt(olM[2]) + 1) + ". ";
+                            const ins = "\n" + next;
+                            ta.value = val.slice(0, pos) + ins + val.slice(ta.selectionEnd);
+                            ta.selectionStart = ta.selectionEnd = pos + ins.length;
+                            schedSummary();
+                        }
+                        return;
+                    }
+                }
+                if (e.key === "Tab") {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        const ta = $("ed"),
+                            p = ta.selectionStart;
+                        ta.value =
+                            ta.value.slice(0, p) + "\t" + ta.value.slice(p);
+                        ta.selectionStart = ta.selectionEnd = p + 1;
+                    } else requestCompletion();
+                }
+            });
+
+            $("ed").addEventListener("input", () => {
+                schedUndo();
+                schedSummary();
+            });
+
+            // ── Save / Load ─────────────────────────────────────────────
+            let fileHandle = null;
+
+            function updateTitle() {
+                document.title = fileHandle
+                    ? `FIM Writer — ${fileHandle.name}`
+                    : "FIM Writer";
+            }
+
+            async function openFile() {
+                if (window.showOpenFilePicker) {
+                    try {
+                        const [fh] = await window.showOpenFilePicker({
+                            types: [
+                                {
+                                    description: "Markdown",
+                                    accept: {
+                                        "text/markdown": [".md", ".markdown"],
+                                        "text/plain": [".txt"],
+                                    },
+                                },
+                            ],
+                        });
+                        const file = await fh.getFile();
+                        pushUndo();
+                        $("ed").value = await file.text();
+                        fileHandle = fh;
+                        pushUndo();
+                        S.summary = null;
+                        S.sumWC = 0;
+                        schedSummary();
+                        updateCtx();
+                        updateTitle();
+                    } catch (e) {
+                        if (e.name !== "AbortError") console.warn("Open:", e);
+                    }
+                } else {
+                    const inp = document.createElement("input");
+                    inp.type = "file";
+                    inp.accept = ".md,.markdown,.txt";
+                    inp.onchange = async () => {
+                        const f = inp.files[0];
+                        if (!f) return;
+                        pushUndo();
+                        $("ed").value = await f.text();
+                        fileHandle = null;
+                        pushUndo();
+                        S.summary = null;
+                        S.sumWC = 0;
+                        schedSummary();
+                        updateCtx();
+                        document.title = `FIM Writer — ${f.name}`;
+                    };
+                    inp.click();
+                }
+            }
+
+            async function saveFile(saveAs) {
+                const text = $("ed").value;
+                if (window.showSaveFilePicker) {
+                    try {
+                        if (!fileHandle || saveAs) {
+                            fileHandle = await window.showSaveFilePicker({
+                                suggestedName:
+                                    fileHandle?.name || "document.md",
+                                types: [
+                                    {
+                                        description: "Markdown",
+                                        accept: { "text/markdown": [".md"] },
+                                    },
+                                ],
+                            });
+                        }
+                        const w = await fileHandle.createWritable();
+                        await w.write(text);
+                        await w.close();
+                        updateTitle();
+                        setStatus("ready", "saved");
+                    } catch (e) {
+                        if (e.name !== "AbortError") console.warn("Save:", e);
+                    }
+                } else {
+                    const blob = new Blob([text], { type: "text/markdown" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = fileHandle?.name || "document.md";
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    setStatus("ready", "downloaded");
+                }
+            }
+
+            $("btn-open").addEventListener("click", openFile);
+            $("btn-savef").addEventListener("click", () => saveFile(false));
+
+            // ── Export / Print ──────────────────────────────────────────
+            $("btn-export").addEventListener("click", () => window.print());
+
+            // ── Test connection ─────────────────────────────────────────
+            $("btn-test").addEventListener("click", async () => {
+                if (!modEl.value.trim()) { setStatus("error", "no model"); return }
+                setStatus("loading", "testing…");
+                try {
+                    await callAPI([{ role: "user", content: "hi" }], 1, 0);
+                    setStatus("ready", "connection ok");
+                } catch (e) {
+                    setStatus("error", e.message.slice(0, 60));
+                }
+            });
+
+            // ── Reset (new document) ────────────────────────────────────
+            $("btn-reset").addEventListener("click", () => {
+                if ($("ed").value && !confirm("Clear the document?")) return;
+                pushUndo();
+                $("ed").value = "";
+                fileHandle = null;
+                S.summary = null; S.sumWC = 0;
+                updateTitle(); updateCtx();
+            });
+
+            // ── Markdown preview ────────────────────────────────────────
+            function escHtml(s) {
+                return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            }
+
+            function inlineMd(s) {
+                s = escHtml(s)
+                // restore safe HTML tags that were escaped
+                s = s.replace(/&lt;(\/?)(\s*)(br|hr|sub|sup|small|u|s|mark|abbr|details|summary|kbd|wbr)(\s*\/?)&gt;/gi,
+                    (_, sl, s1, tag, s2) => `<${sl}${tag.toLowerCase()}>`)
+                s = s.replace(/<!--[\s\S]*?-->/g, '')
+                s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                s = s.replace(/\*(.+?)\*/g, '<em>$1</em>')
+                s = s.replace(/~~(.+?)~~/g, '<del>$1</del>')
+                s = s.replace(/==(.+?)==/g, '<mark>$1</mark>')
+                s = s.replace(/`([^`]+)`/g, '<code>$1</code>')
+                s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">')
+                s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+                return s
+            }
+
+            function renderMarkdown(md) {
+                const lines = md.split('\n')
+                const out = []
+                let i = 0
+                while (i < lines.length) {
+                    const line = lines[i]
+                    // fenced code block
+                    if (line.startsWith('```')) {
+                        const code = []
+                        i++
+                        while (i < lines.length && !lines[i].startsWith('```')) code.push(escHtml(lines[i++]))
+                        out.push(`<pre><code>${code.join('\n')}</code></pre>`)
+                        i++; continue
+                    }
+                    // heading
+                    const hm = line.match(/^(#{1,4}) (.+)/)
+                    if (hm) { out.push(`<h${hm[1].length}>${inlineMd(hm[2])}</h${hm[1].length}>`); i++; continue }
+                    // hr
+                    if (/^[-*_]{3,}\s*$/.test(line)) { out.push('<hr>'); i++; continue }
+                    // blockquote
+                    if (line.startsWith('> ')) {
+                        const ql = []
+                        while (i < lines.length && lines[i].startsWith('> ')) ql.push(lines[i++].slice(2))
+                        out.push(`<blockquote><p>${inlineMd(ql.join(' '))}</p></blockquote>`)
+                        continue
+                    }
+                    // unordered list
+                    if (/^- /.test(line)) {
+                        out.push('<ul>')
+                        while (i < lines.length && /^- /.test(lines[i]))
+                            out.push(`<li>${inlineMd(lines[i++].slice(2))}</li>`)
+                        out.push('</ul>'); continue
+                    }
+                    // ordered list
+                    if (/^\d+\. /.test(line)) {
+                        out.push('<ol>')
+                        while (i < lines.length && /^\d+\. /.test(lines[i]))
+                            out.push(`<li>${inlineMd(lines[i++].replace(/^\d+\. /,''))}</li>`)
+                        out.push('</ol>'); continue
+                    }
+                    // table
+                    if (/^\|(.+)\|/.test(line) && i + 1 < lines.length && /^\|[\s:-]+\|/.test(lines[i + 1])) {
+                        // parse header
+                        const hdrs = line.split('|').slice(1, -1).map(c => c.trim())
+                        // parse alignment from separator row
+                        const sepCells = lines[i + 1].split('|').slice(1, -1)
+                        const aligns = sepCells.map(c => {
+                            c = c.trim()
+                            if (c.startsWith(':') && c.endsWith(':')) return 'center'
+                            if (c.endsWith(':')) return 'right'
+                            return 'left'
+                        })
+                        i += 2
+                        const rows = []
+                        while (i < lines.length && /^\|(.+)\|/.test(lines[i])) {
+                            rows.push(lines[i].split('|').slice(1, -1).map(c => c.trim()))
+                            i++
+                        }
+                        let t = '<table><thead><tr>'
+                        hdrs.forEach((h, j) => t += `<th style="text-align:${aligns[j] || 'left'}">${inlineMd(h)}</th>`)
+                        t += '</tr></thead><tbody>'
+                        rows.forEach(r => {
+                            t += '<tr>'
+                            hdrs.forEach((_, j) => t += `<td style="text-align:${aligns[j] || 'left'}">${inlineMd(r[j] || '')}</td>`)
+                            t += '</tr>'
+                        })
+                        t += '</tbody></table>'
+                        out.push(t); continue
+                    }
+                    // standalone HTML block tag (e.g. <br>, <hr>)
+                    if (/^\s*<(br|hr)\s*\/?\s*>\s*$/i.test(line)) {
+                        const tag = line.match(/<(br|hr)/i)[1].toLowerCase()
+                        out.push(`<${tag}>`); i++; continue
+                    }
+                    // blank line
+                    if (line.trim() === '') { i++; continue }
+                    // paragraph — consume until blank/block element
+                    const pl = []
+                    while (i < lines.length && lines[i].trim() !== '' &&
+                           !/^(#{1,4} |> |- |\d+\. |```)/.test(lines[i]) &&
+                           !/^[-*_]{3,}/.test(lines[i]) &&
+                           !((/^\|(.+)\|/.test(lines[i])) && i + 1 < lines.length && /^\|[\s:-]+\|/.test(lines[i + 1])) &&
+                           !/^\s*<(br|hr)\s*\/?\s*>\s*$/i.test(lines[i]))
+                        pl.push(lines[i++])
+                    out.push(`<p>${inlineMd(pl.join(' '))}</p>`)
+                }
+                return out.join('\n')
+            }
+
+            let previewOn = false
+            function togglePreview() {
+                previewOn = !previewOn
+                $('ed').classList.toggle('pv-on', previewOn)
+                $('pv').classList.toggle('on', previewOn)
+                $('sp').style.display = previewOn ? 'none' : ''
+                $('btn-preview').textContent = previewOn ? 'Edit' : 'Preview'
+                if (previewOn) $('pv').innerHTML = renderMarkdown($('ed').value)
+            }
+            $('btn-preview').addEventListener('click', togglePreview)
+            // Refresh preview on input if open
+            $('ed').addEventListener('input', () => { if (previewOn) $('pv').innerHTML = renderMarkdown($('ed').value) })
+
+            // ── Copy to clipboard ───────────────────────────────────────
+            $("btn-copy-md").addEventListener("click", async () => {
+                try {
+                    await navigator.clipboard.writeText($("ed").value);
+                    setStatus("ready", "copied as markdown");
+                } catch (e) {
+                    setStatus("error", "copy failed");
+                }
+            });
+
+            $("btn-copy-html").addEventListener("click", async () => {
+                const html = renderMarkdown($("ed").value);
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({
+                            "text/html": new Blob([html], { type: "text/html" }),
+                            "text/plain": new Blob([html], { type: "text/plain" }),
+                        }),
+                    ]);
+                    setStatus("ready", "copied as html");
+                } catch (e) {
+                    setStatus("error", "copy failed");
+                }
+            });
+
+            // ── Load config from CSV ────────────────────────────────────
+            $("btn-load-cfg").addEventListener("click", () => {
+                const inp = document.createElement("input");
+                inp.type = "file";
+                inp.accept = ".csv,.txt";
+                inp.onchange = async () => {
+                    const f = inp.files[0];
+                    if (!f) return;
+                    const text = (await f.text()).trim();
+                    const parts = text.split(",").map((s) => s.trim());
+                    if (parts.length < 1) { setStatus("error", "invalid CSV"); return; }
+                    if (parts[0]) { urlEl.value = parts[0]; localStorage.setItem("fw_url", parts[0]); }
+                    if (parts[1]) { keyEl.value = parts[1]; sessionStorage.setItem("fw_key", parts[1]); }
+                    if (parts[2]) { modEl.value = parts[2]; localStorage.setItem("fw_model", parts[2]); }
+                    setStatus("ready", "config loaded");
+                };
+                inp.click();
+            });
+
+            // ── Global keyboard shortcuts ───────────────────────────────
+            document.addEventListener("keydown", (e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "o") {
+                    e.preventDefault();
+                    openFile();
+                }
+                if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+                    e.preventDefault();
+                    saveFile(e.shiftKey);
+                }
+            });
+
+            pushUndo(); // capture initial state
+            updateCtx();
+        </script>
+    </body>
+</html>
